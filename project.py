@@ -2,7 +2,7 @@
 # Student ID: 301301402
 
 # TODO: Libraries - pip install wheel, pip install pandas, pip install numpy, pip install matplotlib
-import numpy as np, random, operator, math, pandas as pd, matplotlib.pyplot as plt, os
+import time, numpy as np, random, operator, math, pandas as pd, matplotlib.pyplot as plt, os
 
 # Reference:
 #     https://towardsdatascience.com/evolution-of-a-salesman-a-complete-genetic-algorithm-tutorial-for-python-6fe5d2b3ca35
@@ -175,18 +175,78 @@ def geneticAlgorithmWithGraph(initialIndividual, populationSize, eliteSize, muta
     info = rankedPopulation[0]
     updateRecord("best-solution1000_fanghaof.txt", info.individual, 1 / info.score)
 
-def geneticAlgorithmWithPMX(initialIndividual, populationSize, eliteSize, mutationRate, numGenerations):
+def pmx(s, t):
+    n = len(s)
+
+    # choose crossover point at random
+    c = random.randrange(1, n - 1)  # c is index of last element of left part
+
+    # first offspring
+    first = s[:]
+    i = 0
+    while i <= c:
+        j = first.index(t[i])
+        first[i], first[j] = first[j], first[i]
+        i += 1
+
+    # second offspring
+    second = t[:]
+    i = 0
+    while i <= c:
+        j = second.index(s[i])
+        second[i], second[j] = second[j], second[i]
+        i += 1
+
+    return first, second
+
+def do_rand_swap(lst):
+    n = len(lst)
+    i, j = random.randrange(n), random.randrange(n)
+    lst[i], lst[j] = lst[j], lst[i]  # swap lst[i] and lst[j]
+    return lst
+
+def generateNextPopulationOptimized(population, populationSize):
+    nextGeneration = []
+    for i in range(0, int(populationSize * 0.4)):
+        temp = Individual(population[i].individual, population[i].score)
+        nextGeneration.append(temp)
+
+    for i in range(0, int(populationSize * 0.3 / 2)):
+        a = list(random.choice(nextGeneration).individual)
+        b = list(random.choice(nextGeneration).individual)
+        childA, childB = pmx(a, b)
+        nextGeneration.append(Individual(childA, 1 / calIndividualScore(childA)))
+        nextGeneration.append(Individual(childB, 1 / calIndividualScore(childB)))
+
+    for i in range(0, int(populationSize * 0.2)):
+        a = list(random.choice(nextGeneration).individual)
+        b = list(random.choice(nextGeneration).individual)
+        child = generateChildren(a, b)
+        nextGeneration.append(Individual(child, 1 / calIndividualScore(child)))
+
+    while len(nextGeneration) < populationSize:
+        a = list(nextGeneration[0].individual)
+        a = do_rand_swap(a)
+        nextGeneration.append(Individual(a, 1 / calIndividualScore(a)))
+
+    return nextGeneration
+
+def geneticAlgorithmWithPMXCustomized(initialIndividual, populationSize, numGenerations):
     currentPopulation = []
     progress = []
-    for i in range(0, populationSize):
+    for i in range(0, int(populationSize / 5)):
+        currentPopulation.append(Individual(initialIndividual, 1 / calIndividualScore(initialIndividual)))
+    progress.append(1 / currentPopulation[0].score)
+
+    while len(currentPopulation) < populationSize:
         random.shuffle(initialIndividual)
         tempList = list(initialIndividual)
         currentPopulation.append(Individual(tempList, 1 / calIndividualScore(tempList)))
-    progress.append(1 / rankPopulation(currentPopulation)[0].score)
 
     for num in range(0, numGenerations):
-        currentPopulation = generateNextPopulation(currentPopulation, eliteSize, mutationRate)
-        temp = rankPopulation(currentPopulation)[0]
+        currentPopulation = generateNextPopulationOptimized(currentPopulation, populationSize)
+        currentPopulation = rankPopulation(currentPopulation)
+        temp = currentPopulation[0]
         progress.append(1 / temp.score)
         print(1 / temp.score)
         temp = temp.individual
@@ -272,11 +332,16 @@ def calIndividualScore(cityList):
         + math.pow(cityList[len(cityList) - 1].yCoord - cityList[0].yCoord, 2))
     return score
 
+
+
 cities = load("cities1000.txt")
-# cities = load("testCities10.txt")
 print("Initial Score: ", calIndividualScore(cities))
+start = time.time()
+# geneticAlgorithmWithPMXCustomized(cities, 1500, 1000)
 # geneticAlgorithm(cities, 100, 10, 0.01, 2000)
-geneticAlgorithmWithGraph(cities, 500, 100, 0.05, 2000)
+geneticAlgorithmWithGraph(cities, 500, 200, 0.00, 100)
+end = time.time()
+print("Time Elapsed: ", end - start)
 # test = Fitness(1, 1)
 # test1 = Fitness(2, 3)
 # test2 = Fitness(3, 2)
