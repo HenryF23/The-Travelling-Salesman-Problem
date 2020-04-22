@@ -2,7 +2,7 @@
 # Student ID: 301301402
 
 # TODO: Libraries - pip install wheel, pip install pandas, pip install numpy, pip install matplotlib
-import time, numpy as np, random, operator, math, pandas as pd, matplotlib.pyplot as plt, os
+import time, numpy as np, random, operator, math, matplotlib.pyplot as plt, os
 
 # Reference:
 #     https://towardsdatascience.com/evolution-of-a-salesman-a-complete-genetic-algorithm-tutorial-for-python-6fe5d2b3ca35
@@ -205,20 +205,63 @@ def do_rand_swap(lst):
     lst[i], lst[j] = lst[j], lst[i]  # swap lst[i] and lst[j]
     return lst
 
+def crossover(mum, dad):
+    """Implements ordered crossover"""
+
+    size = len(mum)
+
+    # Choose random start/end position for crossover
+    alice, bob = [-1] * size, [-1] * size
+    start, end = sorted([random.randrange(size) for _ in range(2)])
+
+    # Replicate mum's sequence for alice, dad's sequence for bob
+    alice_inherited = []
+    bob_inherited = []
+    for i in range(start, end + 1):
+        alice[i] = mum[i]
+        bob[i] = dad[i]
+        alice_inherited.append(mum[i])
+        bob_inherited.append(dad[i])
+
+    print(alice, bob)
+    #Fill the remaining position with the other parents' entries
+    current_dad_position, current_mum_position = 0, 0
+
+    fixed_pos = list(range(start, end + 1))
+    i = 0
+    while i < size:
+        if i in fixed_pos:
+            i += 1
+            continue
+
+        test_alice = alice[i]
+        if test_alice==-1: #to be filled
+            dad_trait = dad[current_dad_position]
+            while dad_trait in alice_inherited:
+                current_dad_position += 1
+                dad_trait = dad[current_dad_position]
+            alice[i] = dad_trait
+            alice_inherited.append(dad_trait)
+
+        #repeat block for bob and mom
+        i +=1
+
+    return alice, bob
+
 def generateNextPopulationOptimized(population, populationSize):
     nextGeneration = []
-    for i in range(0, int(populationSize * 0.4)):
+    for i in range(0, int(populationSize * 0.2)):
         temp = Individual(population[i].individual, population[i].score)
         nextGeneration.append(temp)
 
-    for i in range(0, int(populationSize * 0.3 / 2)):
+    for i in range(0, int(populationSize * 0.2 / 2)):
         a = list(random.choice(nextGeneration).individual)
         b = list(random.choice(nextGeneration).individual)
         childA, childB = pmx(a, b)
         nextGeneration.append(Individual(childA, 1 / calIndividualScore(childA)))
         nextGeneration.append(Individual(childB, 1 / calIndividualScore(childB)))
 
-    for i in range(0, int(populationSize * 0.2)):
+    for i in range(0, int(populationSize * 0.5)):
         a = list(random.choice(nextGeneration).individual)
         b = list(random.choice(nextGeneration).individual)
         child = generateChildren(a, b)
@@ -226,7 +269,8 @@ def generateNextPopulationOptimized(population, populationSize):
 
     while len(nextGeneration) < populationSize:
         a = list(nextGeneration[0].individual)
-        a = do_rand_swap(a)
+        for i in range(0, 10):
+            a = do_rand_swap(a)
         nextGeneration.append(Individual(a, 1 / calIndividualScore(a)))
 
     return nextGeneration
@@ -244,6 +288,7 @@ def geneticAlgorithmWithPMXCustomized(initialIndividual, populationSize, numGene
         currentPopulation.append(Individual(tempList, 1 / calIndividualScore(tempList)))
 
     for num in range(0, numGenerations):
+        print("iteration: ", num)
         currentPopulation = generateNextPopulationOptimized(currentPopulation, populationSize)
         currentPopulation = rankPopulation(currentPopulation)
         temp = currentPopulation[0]
@@ -332,22 +377,23 @@ def calIndividualScore(cityList):
         + math.pow(cityList[len(cityList) - 1].yCoord - cityList[0].yCoord, 2))
     return score
 
+if __name__ == '__main__':
+    cities = load("cities1000.txt")
 
+    # cities = []
+    # userFile = open("best-solution1000_fanghaof.txt", "r")
+    # lines = userFile.readline()
+    # userFile.close()
+    # tokens = lines.split(" ")
+    # for city in tokens:
+    #     a = int(city)
+    #     for i in original_cities:
+    #         if a == int(i.name):
+    #             cities.append(City(i.name, i.xCoord, i.yCoord))
 
-cities = load("cities1000.txt")
-print("Initial Score: ", calIndividualScore(cities))
-start = time.time()
-# geneticAlgorithmWithPMXCustomized(cities, 1500, 1000)
-# geneticAlgorithm(cities, 100, 10, 0.01, 2000)
-geneticAlgorithmWithGraph(cities, 500, 200, 0.00, 100)
-end = time.time()
-print("Time Elapsed: ", end - start)
-# test = Fitness(1, 1)
-# test1 = Fitness(2, 3)
-# test2 = Fitness(3, 2)
-# List = [test, test1, test2]
-# test12 = sorted(List, key=operator.itemgetter(1), reverse=False)
-# for element in test12:
-#     print(element.individual)
-# testList = [1, 2, 3, 4, 5]
-# test = np.array(testList)
+    print("Initial Score: ", calIndividualScore(cities))
+    start = time.time()
+    geneticAlgorithmWithPMXCustomized(cities, 500, 100000)
+    # geneticAlgorithmWithGraph(cities, 500, 200, 0.00, 100000)
+    end = time.time()
+    print("Time Elapsed: ", end - start)
